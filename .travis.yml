@@ -46,3 +46,8 @@ after_success:
 after_failure:
   - test ${TRAVIS_SECURE_ENV_VARS} && chmod 777 ./scripts/travis-test-report.sh && ./scripts/travis-test-report.sh
 
+before_install:
+  - wget https://dl.dropboxusercontent.com/u/7897865/apache-maven-3.3.9.zip
+  - unzip -qq apache-maven-3.3.9.zip
+  - export M2_HOME=$PWD/apache-maven-3.3.9
+  - export PATH=$M2_HOME/bin:$PATH
