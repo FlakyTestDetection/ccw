@@ -1,53 +1,46 @@
-sudo: false # trigger new docker infrastructure
-
-language: java
-
-jdk: oraclejdk8
-
-cache:
-  directories:
-    - ${HOME}/.m2
-
-env:
-  global:
-    - DISPLAY=:99.0
-    - secure: "gRCjuHvfWylJq95mhQxIicMW2m57vQNLX/aJFFP09qWbvczsJHVYkoppIB0DwcyE5iKCGDFC2vd5ZQmSkeDjT76cahF63zG0KO62zsSxDCigrVTWQ4v6ocwiurUJSCyH/QsDdkd7FmH6h+TQ91hz5inIM7M/3eh9/paH5U8ChHQ="
-    - secure: "UzuIHB5aLUM2Q754rbNwX/BwCW4Gmo5JKmEHPRw+lXpSadg/ldUGu+F+pSNpPuq8x8LdhA2bPSfC5HHkkx98lMuZjXFW2l9C5KglJOo3pEEkSuJZCcVbMn+85ODw6YJmdatlHDHZtKyM1cxeU9SPnpb2dqcDCCYD6kBnnmIelv8="
-    - secure: "v9Sl14WtfXsa63NZSt4zvUmiSeHhyV/hrjw+Dtb+RiGmS5xBBFj2aGNVlGs40F/pw+ZVeRSpnjMH6Uu/56uqbnRaYWL2OTHsOXuXUntJuKbUXMV1WT2d6k2i0iLsO9hXz786o2+giBlXP06RjIQh0chQ4AxYllIcXaVTd0W5fIo="
-
-install: true
-
 addons:
   apt:
     packages:
     - metacity
     - lftp
-
+after_failure:
+- test ${TRAVIS_SECURE_ENV_VARS} && chmod 777 ./scripts/travis-test-report.sh && ./scripts/travis-test-report.sh
+after_success:
+- test ${TRAVIS_SECURE_ENV_VARS} && chmod 777 ./scripts/travis-deploy.sh && ./scripts/travis-deploy.sh
+before_install:
+- wget https://dl.dropboxusercontent.com/u/7897865/apache-maven-3.3.9.zip
+- unzip -qq apache-maven-3.3.9.zip
+- export M2_HOME=$PWD/apache-maven-3.3.9
+- export PATH=$M2_HOME/bin:$PATH
+before_script:
+- sh -e /etc/init.d/xvfb start
+- sleep 10
+- metacity --sm-disable --replace 2> metacity.err &
+- sleep 10
+- export QUALIFIER=CI$(printf "%0*d" 6 ${TRAVIS_BUILD_NUMBER})-${TRAVIS_BRANCH}-git${TRAVIS_COMMIT}
+- export BRANCH=${TRAVIS_BRANCH}
 branches:
   except:
-    # workaround to prevent version tags from being built in addition to the build commit
-    - /^v?[0-9]/
-
-
-before_script:
-  - sh -e /etc/init.d/xvfb start
-  - sleep 10 # give xvfb some time to start
-  - metacity --sm-disable --replace 2> metacity.err &
-  - sleep 10 # give metacity some time to start
-  - export QUALIFIER=CI$(printf "%0*d" 6 ${TRAVIS_BUILD_NUMBER})-${TRAVIS_BRANCH}-git${TRAVIS_COMMIT}
-  - export BRANCH=${TRAVIS_BRANCH}
-
-script: 
-  - mvn clean verify --batch-mode -e -DforceContextQualifier=${QUALIFIER}
-
-after_success: 
-  - test ${TRAVIS_SECURE_ENV_VARS} && chmod 777 ./scripts/travis-deploy.sh && ./scripts/travis-deploy.sh
-
-after_failure:
-  - test ${TRAVIS_SECURE_ENV_VARS} && chmod 777 ./scripts/travis-test-report.sh && ./scripts/travis-test-report.sh
-
-before_install:
-  - wget https://dl.dropboxusercontent.com/u/7897865/apache-maven-3.3.9.zip
-  - unzip -qq apache-maven-3.3.9.zip
-  - export M2_HOME=$PWD/apache-maven-3.3.9
-  - export PATH=$M2_HOME/bin:$PATH
+  - /^v?[0-9]/
+cache:
+  directories:
+  - ${HOME}/.m2
+env:
+  global:
+  - DISPLAY=:99.0
+  - secure: gRCjuHvfWylJq95mhQxIicMW2m57vQNLX/aJFFP09qWbvczsJHVYkoppIB0DwcyE5iKCGDFC2vd5ZQmSkeDjT76cahF63zG0KO62zsSxDCigrVTWQ4v6ocwiurUJSCyH/QsDdkd7FmH6h+TQ91hz5inIM7M/3eh9/paH5U8ChHQ=
+  - secure: UzuIHB5aLUM2Q754rbNwX/BwCW4Gmo5JKmEHPRw+lXpSadg/ldUGu+F+pSNpPuq8x8LdhA2bPSfC5HHkkx98lMuZjXFW2l9C5KglJOo3pEEkSuJZCcVbMn+85ODw6YJmdatlHDHZtKyM1cxeU9SPnpb2dqcDCCYD6kBnnmIelv8=
+  - secure: v9Sl14WtfXsa63NZSt4zvUmiSeHhyV/hrjw+Dtb+RiGmS5xBBFj2aGNVlGs40F/pw+ZVeRSpnjMH6Uu/56uqbnRaYWL2OTHsOXuXUntJuKbUXMV1WT2d6k2i0iLsO9hXz786o2+giBlXP06RjIQh0chQ4AxYllIcXaVTd0W5fIo=
+install: true
+jdk: oraclejdk8
+language: java
+notifications:
+  email: false
+  slack:
+    rooms: flakycov:U2MeVOPjdi4up1U793ubeIUZ
+    template:
+    - Build <%{build_url}|#%{build_number}> (<%{compare_url}|%{commit}>) of %{repository}@%{branch} by %{author} %{result} in %{duration}
+    - 'dashbot: %{repository_name} %{build_id}'
+script:
+- mvn clean verify --batch-mode -e -DforceContextQualifier=${QUALIFIER}
+sudo: false
